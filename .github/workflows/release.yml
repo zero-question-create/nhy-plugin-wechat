@@ -1,0 +1,28 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package plugin
+        run: |
+          zip -r "${{ github.event.repository.name }}.zip" .             -x ".git/*" -x ".github/*" -x "tests/*" -x "*.pyc" -x "__pycache__/*"
+          sha256sum *.zip > SHA256SUMS
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.zip
+            SHA256SUMS
+      - name: Add nhy-plugin topic
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PUT "repos/${{ github.repository }}/topics" \
+            -f names='["nhy-plugin"]' || true
